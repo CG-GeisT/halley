@@ -32,9 +32,10 @@
               libxkbcommon
               libinput
               seatd
-              mesa.lib
+              mesa
               libdisplay-info
               libdrm
+              libgbm
             ];
 
             nativeBuildInputs = with pkgs; [
@@ -73,9 +74,10 @@
             libxkbcommon
             libinput
             seatd
-            mesa.lib
+            mesa
             libdisplay-info
             libdrm
+            libgbm
             clippy
             rustfmt
           ];
