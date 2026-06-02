@@ -15,7 +15,7 @@
     in
     {
       overlays.default = final: prev: {
-        halley = final.callPackage ./pkgs/halley.nix { };
+        halley = final.callPackage ./packaging/halley.nix { };
       };
 
       nixosModules.default = { config, lib, pkgs, ... }:
