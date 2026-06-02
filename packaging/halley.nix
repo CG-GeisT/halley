@@ -34,7 +34,7 @@ rustPlatform.buildRustPackage rec {
   ];
 
   buildInputs = [
-    seatd
+    libseat
     libinput
     libxkbcommon
     mesa
