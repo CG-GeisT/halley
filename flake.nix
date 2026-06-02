@@ -1,93 +1,76 @@
 {
-  description = "Halley - Spatial Wayland compositor built around infinite workspace navigation";
+  description = "Halley Wayland compositor flake";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-      in
-      {
-        packages = {
-          halley = pkgs.rustPlatform.buildRustPackage rec {
-            pname = "halley";
-            version = "0.3.2";
+  outputs = { self, nixpkgs, flake-utils }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+    in
+    {
+      overlays.default = final: prev: {
+        halley = final.callPackage ./pkgs/halley.nix { };
+      };
 
-            src = self;
+      nixosModules.default = { config, lib, pkgs, ... }:
+        let
+          cfg = config.programs.halley;
+        in {
+          options.programs.halley = {
+            enable = lib.mkEnableOption "the Halley Wayland compositor";
 
-            cargoLock = {
-              lockFile = ./Cargo.lock;
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = self.packages.${pkgs.system}.halley;
+              defaultText = lib.literalExpression "self.packages.${pkgs.system}.halley";
+              description = "The Halley package to use.";
             };
 
-            buildInputs = with pkgs; [
-              wayland
-              libxkbcommon
-              libinput
-              seatd
-              mesa
-              libdisplay-info
-              libdrm
-              libgbm
-            ];
-
-            nativeBuildInputs = with pkgs; [
-              pkg-config
-            ];
-
-            postInstall = ''
-              # Install session file for display managers
-              install -Dm755 $src/packaging/wayland-sessions/halley-session $out/bin/halley-session
-              install -Dm644 $src/packaging/wayland-sessions/halley.desktop $out/share/wayland-sessions/halley.desktop
-              
-              # Install systemd user units
-              install -Dm644 $src/packaging/systemd-user/halley.service $out/lib/systemd/user/halley.service
-              install -Dm644 $src/packaging/systemd-user/halley-shutdown.target $out/lib/systemd/user/halley-shutdown.target
-            '';
-
-            meta = with pkgs.lib; {
-              description = "Spatial Wayland compositor built around infinite workspace navigation";
-              homepage = "https://github.com/CG-GeisT/halley";
-              license = licenses.gpl3Only;
-              maintainers = [];
-              platforms = platforms.linux;
+            extraPackages = lib.mkOption {
+              type = lib.types.listOf lib.types.package;
+              default = with pkgs; [
+                fuzzel
+                xwayland-satellite
+                xdg-desktop-portal-gtk
+                xdg-desktop-portal-wlr
+              ];
+              description = "Extra runtime packages commonly used with Halley.";
             };
           };
 
-          default = self.packages.${system}.halley;
+          config = lib.mkIf cfg.enable {
+            environment.systemPackages = [ cfg.package ] ++ cfg.extraPackages;
+            services.displayManager.sessionPackages = [ cfg.package ];
+            services.seatd.enable = lib.mkDefault true;
+            programs.xwayland.enable = lib.mkDefault true;
+          };
+        };
+    } // flake-utils.lib.eachSystem supportedSystems (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ self.overlays.default ];
+        };
+      in {
+        packages = {
+          halley = pkgs.halley;
+          default = pkgs.halley;
         };
 
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
+          inputsFrom = [ pkgs.halley ];
+          nativeBuildInputs = with pkgs; [
             cargo
             rustc
             rust-analyzer
             pkg-config
-            wayland
-            libxkbcommon
-            libinput
-            seatd
-            mesa
-            libdisplay-info
-            libdrm
-            libgbm
-            clippy
-            rustfmt
           ];
-
-          shellHook = ''
-            echo "Halley development environment loaded"
-          '';
         };
-
-        checks.build = self.packages.${system}.halley;
-      }
-    );
+      });
 }
