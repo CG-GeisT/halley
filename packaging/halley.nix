@@ -34,7 +34,6 @@ rustPlatform.buildRustPackage rec {
   ];
 
   buildInputs = [
-    libgbm      
     seatd
     libinput
     libxkbcommon
