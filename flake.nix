@@ -32,7 +32,7 @@
               libxkbcommon
               libinput
               seatd
-              mesa
+              mesa.lib
               libdisplay-info
               libdrm
             ];
@@ -73,7 +73,7 @@
             libxkbcommon
             libinput
             seatd
-            mesa
+            mesa.lib
             libdisplay-info
             libdrm
             clippy
